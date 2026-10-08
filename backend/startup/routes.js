@@ -7,8 +7,10 @@ const customers = require("../routes/customers");
 const genres = require("../routes/genres");
 const error = require("../middleware/error");
 const returns = require("../routes/returns");
+const cors = require("cors");
 
 module.exports = function (app) {
+  app.use(cors());
   // Parse JSON request bodies before they reach the route handlers.
   app.use(express.json());
   // Mount each feature router under its public API prefix.
