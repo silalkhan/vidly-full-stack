@@ -1,40 +1,40 @@
 import { useState } from "react";
+import { Link, NavLink } from "react-router-dom";
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const linkClass =
-    "text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 transition-colors duration-200 py-2 px-3 rounded-md";
+  const baseStyle =
+    "text-sm font-medium transition-colors duration-200 py-2 px-3 rounded-md";
+
+  const getLinkStyle = ({ isActive }: { isActive: boolean }) =>
+    isActive
+      ? `${baseStyle} text-indigo-400 bg-indigo-500/10 font-semibold`
+      : `${baseStyle} text-slate-400 hover:text-slate-100 hover:bg-slate-800/40`;
 
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-900 px-6 py-4">
       <div className="mx-auto max-w-7xl">
-        {/* Desktop / Header */}
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <a
-            href="#"
+          <Link
+            to="/"
             className="text-2xl font-black tracking-wider text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text hover:opacity-90"
           >
             VIDLY
-          </a>
+          </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden items-center space-x-4 md:flex">
-            <a href="#" className={linkClass}>
+            <NavLink to="/movies" className={getLinkStyle}>
               Movies
-            </a>
-
-            <a href="#" className={linkClass}>
+            </NavLink>
+            <NavLink to="/customers" className={getLinkStyle}>
               Customers
-            </a>
-
-            <a href="#" className={linkClass}>
+            </NavLink>
+            <NavLink to="/rentals" className={getLinkStyle}>
               Rentals
-            </a>
+            </NavLink>
           </div>
 
-          {/* Desktop Authentication */}
           <div className="hidden items-center space-x-3 md:flex">
             <a
               href="#"
@@ -42,7 +42,6 @@ const NavBar = () => {
             >
               Login
             </a>
-
             <a
               href="#"
               className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-900/30 transition-all duration-150 hover:bg-indigo-500 active:bg-indigo-700"
@@ -51,7 +50,6 @@ const NavBar = () => {
             </a>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -62,27 +60,38 @@ const NavBar = () => {
           </button>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="mt-4 border-t border-slate-800 pt-4 md:hidden">
             <div className="flex flex-col space-y-2">
-              <a href="#" className={linkClass}>
+              <NavLink
+                to="/movies"
+                className={getLinkStyle}
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Movies
-              </a>
-
-              <a href="#" className={linkClass}>
+              </NavLink>
+              <NavLink
+                to="/customers"
+                className={getLinkStyle}
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Customers
-              </a>
-
-              <a href="#" className={linkClass}>
+              </NavLink>
+              <NavLink
+                to="/rentals"
+                className={getLinkStyle}
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Rentals
-              </a>
+              </NavLink>
 
               <div className="mt-2 flex flex-col gap-2 border-t border-slate-800 pt-3">
-                <a href="#" className={linkClass}>
+                <a
+                  href="#"
+                  className="text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 transition-colors duration-200 py-2 px-3 rounded-md"
+                >
                   Login
                 </a>
-
                 <a
                   href="#"
                   className="rounded-xl bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-indigo-500"
