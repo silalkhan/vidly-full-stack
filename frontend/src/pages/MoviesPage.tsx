@@ -1,28 +1,118 @@
+import { useState } from "react";
+import type { Movie } from "../types/Movie";
+import MovieList from "../components/MovieList";
+
+const tempMovies: Movie[] = [
+  {
+    _id: "m1",
+    title: "Inception",
+    genre: { _id: "g1", name: "Action" },
+    numberInStock: 6,
+    dailyRentalRate: 2.5,
+  },
+  {
+    _id: "m2",
+    title: "The Hangover",
+    genre: { _id: "g2", name: "Comedy" },
+    numberInStock: 4,
+    dailyRentalRate: 2.0,
+  },
+  {
+    _id: "m3",
+    title: "The Matrix",
+    genre: { _id: "g1", name: "Action" },
+    numberInStock: 3,
+    dailyRentalRate: 3.0,
+  },
+  {
+    _id: "m4",
+    title: "Interstellar",
+    genre: { _id: "g3", name: "Sci-Fi" },
+    numberInStock: 5,
+    dailyRentalRate: 3.5,
+  },
+];
+
+const genres = ["All", "Action", "Comedy", "Sci-Fi"];
+
 function MoviesPage() {
+  const [search, setSearch] = useState("");
+  const [selectedGenre, setSelectedGenre] = useState("All");
+
+  const filteredMovies = tempMovies.filter((movie) => {
+    const matchesSearch = movie.title
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
+
+    const matchesGenre =
+      selectedGenre === "All" || movie.genre.name === selectedGenre;
+
+    return matchesSearch && matchesGenre;
+  });
+
   return (
-    // Centering layout container taking up remaining viewport height
-    <main className="flex min-h-[calc(100vh-73px)] flex-col items-center justify-center bg-slate-950 p-6 text-center">
-      {/* Dynamic typography wrapper utilizing space-y spacing utility */}
-      <div className="space-y-4">
-        {/* Brand Main Hero Title */}
-        <h1 className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">
-          Movies
-        </h1>
-
-        {/* Subtitle Description */}
-        <p className="text-base text-slate-400 sm:text-lg">
-          Manage your movie collection
-        </p>
-
-        {/* Interactive Action Button Elements Group */}
-        <div className="pt-4">
-          <a
-            href="#"
-            className="inline-block rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-900/30 transition-all duration-150 hover:bg-indigo-500 active:bg-indigo-700"
-          >
-            Browse all movies
-          </a>
+    <main className="min-h-[calc(100vh-73px)] bg-slate-950 p-6 md:p-10">
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Header */}
+        <div>
+          <h1 className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
+            Movies Catalog
+          </h1>
+          <p className="mt-2 text-sm text-slate-400 sm:text-base">
+            Browse our movie collection and find your next rental.{" "}
+          </p>
         </div>
+
+        {/* Search and Genre Filter */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="max-w-md flex-1">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search movies..."
+              aria-label="Search movies"
+              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 transition-all duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
+
+          <div
+            className="flex flex-wrap gap-2"
+            aria-label="Filter movies by genre"
+          >
+            {genres.map((genre) => (
+              <button
+                key={genre}
+                type="button"
+                aria-pressed={selectedGenre === genre}
+                onClick={() => setSelectedGenre(genre)}
+                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-150 ${
+                  selectedGenre === genre
+                    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-900/30"
+                    : "border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                }`}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Results */}
+        {filteredMovies.length > 0 ? (
+          <MovieList movies={filteredMovies} />
+        ) : (
+          <div
+            className="rounded-xl border border-slate-800 bg-slate-900/50 px-6 py-12 text-center"
+            role="status"
+          >
+            <h2 className="text-xl font-semibold text-slate-200">
+              No movies found
+            </h2>
+            <p className="mt-2 text-sm text-slate-400">
+              Try a different search term or genre.
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );
