@@ -1,18 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../services/apiClient";
 
-export function useDeleteCustomer() {
+export function useDeleteMovie() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (customerId: string) => {
-      const response = await apiClient.delete(`/customers/${customerId}`);
-
-      return response.data;
-    },
+    mutationFn: (movieId: string) => apiClient.delete(`/movies/${movieId}`),
 
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["movies"] });
     },
   });
 }
