@@ -25,6 +25,7 @@ const rentalSchema = new mongoose.Schema({
     }),
     required: true,
   },
+
   movie: {
     type: new mongoose.Schema({
       title: {
@@ -43,48 +44,59 @@ const rentalSchema = new mongoose.Schema({
     }),
     required: true,
   },
+
+  // The date the movie was rented.
   dateOut: {
     type: Date,
     required: true,
     default: Date.now,
   },
+
+  // This field is set when the movie is returned.
+  // It is absent while the rental is active.
   dateReturned: {
     type: Date,
   },
+
+  // The total rental fee, calculated when the movie is returned.
   rentalFee: {
     type: Number,
     min: 0,
   },
 });
 
+// Find an active rental for the specified customer and movie.
+// Excluding returned rentals prevents an old rental from being selected.
 rentalSchema.statics.lookup = function (customerId, movieId) {
-  // Find the active rental for one customer/movie pair.
   return this.findOne({
     "customer._id": customerId,
     "movie._id": movieId,
+    dateReturned: { $exists: false },
   });
 };
 
+// Mark the rental as returned and calculate its fee.
 rentalSchema.methods.return = function () {
-  // Mark the rental returned and calculate its fee from elapsed whole days.
   this.dateReturned = new Date();
 
+  // Calculate the number of complete days between checkout and return.
   const rentalDays = moment().diff(this.dateOut, "days");
+
   this.rentalFee = rentalDays * this.movie.dailyRentalRate;
 };
 
 const Rental = mongoose.model("Rental", rentalSchema);
 
+// Validate the customer and movie IDs before database operations.
 function validateRental(rental) {
-  // Validate IDs before the route performs database lookups.
   const schema = Joi.object({
-    // Joi validates the transport value; MongoDB receives the ID in the query.
     customerId: Joi.string()
       .regex(/^[0-9a-fA-F]{24}$/)
       .required()
       .messages({
         "string.pattern.base": "Invalid Customer ID format.",
       }),
+
     movieId: Joi.string()
       .regex(/^[0-9a-fA-F]{24}$/)
       .required()

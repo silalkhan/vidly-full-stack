@@ -1,8 +1,27 @@
 import { useState, type FormEvent } from "react";
 import { useRentals } from "../hooks/useRentals";
 import { useAddRental } from "../hooks/useAddRental";
+import { useReturnRental } from "../hooks/useReturnRental";
 import { useCustomers } from "../hooks/useCustomers";
 import { useMovies } from "../hooks/useMovies";
+import type { Rental } from "../types/Rental";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = error.response;
+
+    if (
+      typeof response === "object" &&
+      response !== null &&
+      "data" in response &&
+      typeof response.data === "string"
+    ) {
+      return response.data;
+    }
+  }
+
+  return fallback;
+}
 
 function RentalsPage() {
   const {
@@ -24,13 +43,14 @@ function RentalsPage() {
   } = useMovies();
 
   const addRental = useAddRental();
+  const returnRental = useReturnRental();
 
   const [customerId, setCustomerId] = useState("");
   const [movieId, setMovieId] = useState("");
   const [formError, setFormError] = useState("");
+  const [returnError, setReturnError] = useState("");
 
   const isLoading = rentalsLoading || customersLoading || moviesLoading;
-
   const hasError = rentalsError || customersError || moviesError;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,22 +64,33 @@ function RentalsPage() {
 
     try {
       await addRental.mutateAsync({ customerId, movieId });
-
       setCustomerId("");
       setMovieId("");
     } catch (error: unknown) {
-      const message =
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof error.response === "object" &&
-        error.response !== null &&
-        "data" in error.response &&
-        typeof error.response.data === "string"
-          ? error.response.data
-          : "Failed to create rental. Please try again.";
+      setFormError(
+        getErrorMessage(error, "Failed to create rental. Please try again."),
+      );
+    }
+  }
 
-      setFormError(message);
+  async function handleReturn(rental: Rental) {
+    const confirmed = window.confirm(
+      `Return "${rental.movie.title}" for ${rental.customer.name}?`,
+    );
+
+    if (!confirmed) return;
+
+    setReturnError("");
+
+    try {
+      await returnRental.mutateAsync({
+        customerId: rental.customer._id,
+        movieId: rental.movie._id,
+      });
+    } catch (error: unknown) {
+      setReturnError(
+        getErrorMessage(error, "Failed to return the movie. Please try again."),
+      );
     }
   }
 
@@ -89,7 +120,6 @@ function RentalsPage() {
   }
 
   const availableMovies = movies.filter((movie) => movie.numberInStock > 0);
-
   const activeRentals = rentals.filter((rental) => !rental.dateReturned).length;
 
   function formatDate(date: string) {
@@ -105,7 +135,7 @@ function RentalsPage() {
             Rentals
           </h1>
           <p className="mt-2 text-sm text-slate-400 sm:text-base">
-            Manage movie rentals and track their status.{" "}
+            Manage movie rentals and track their status.
           </p>
         </div>
 
@@ -133,7 +163,6 @@ function RentalsPage() {
                 >
                   Customer
                 </label>
-
                 <select
                   id="customer"
                   required
@@ -159,7 +188,6 @@ function RentalsPage() {
                 >
                   Movie
                 </label>
-
                 <select
                   id="movie"
                   required
@@ -199,6 +227,7 @@ function RentalsPage() {
             </button>
           </form>
         </section>
+
         {/* Rental Statistics */}
         <div className="grid gap-4 sm:grid-cols-2">
           <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
@@ -215,10 +244,20 @@ function RentalsPage() {
             </p>
           </section>
         </div>
+
         {/* Rental List */}
+        {returnError && (
+          <div
+            role="alert"
+            className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-400"
+          >
+            {returnError}
+          </div>
+        )}
+
         {rentals.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
-            <table className="w-full min-w-[800px] text-left text-sm">
+            <table className="w-full min-w-[1000px] text-left text-sm">
               <thead className="border-b border-slate-800 bg-slate-800/50 text-slate-300">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Customer</th>
@@ -227,6 +266,7 @@ function RentalsPage() {
                   <th className="px-6 py-4 font-semibold">Date Returned</th>
                   <th className="px-6 py-4 font-semibold">Rental Fee</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold">Actions</th>
                 </tr>
               </thead>
 
@@ -242,7 +282,7 @@ function RentalsPage() {
                       <td className="px-6 py-4 font-medium text-slate-100">
                         {rental.customer.name}
                         {rental.customer.isGold && (
-                          <span className="ml-2 text-xs text-amber-400">
+                          <span className="ml-2 rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-400">
                             Gold
                           </span>
                         )}
@@ -278,6 +318,25 @@ function RentalsPage() {
                         >
                           {isReturned ? "Returned" : "Active"}
                         </span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        {isReturned ? (
+                          <span className="text-sm text-slate-500">
+                            Completed
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void handleReturn(rental)}
+                            disabled={returnRental.isPending}
+                            className="whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {returnRental.isPending
+                              ? "Processing..."
+                              : "Return Movie"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
