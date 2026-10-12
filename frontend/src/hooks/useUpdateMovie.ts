@@ -19,6 +19,7 @@ export function useUpdateMovie() {
   return useMutation({
     mutationFn: async ({ id, ...movie }: UpdateMovieVariables) => {
       const response = await apiClient.put<Movie>(`/movies/${id}`, movie);
+
       return response.data;
     },
 
