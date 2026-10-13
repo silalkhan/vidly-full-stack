@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const apiClient = axios.create({
-  baseURL: "http://localhost:3001/api",
+  baseURL: "http://localhost:3003/api",
 });
 
 //Add an Axios interceptor so every API request automatically includes the saved token.

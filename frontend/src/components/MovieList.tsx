@@ -3,8 +3,8 @@ import MovieCard from "./MovieCard";
 
 interface MovieListProps {
   movies: Movie[];
-  onEdit: (movie: Movie) => void;
-  onDelete: (movie: Movie) => void;
+  onEdit?: (movie: Movie) => void;
+  onDelete?: (movie: Movie) => void;
 }
 
 function MovieList({ movies, onEdit, onDelete }: MovieListProps) {

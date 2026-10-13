@@ -2,9 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import apiClient from "../services/apiClient";
+import { useAuth } from "../hooks/useAuth";
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -14,6 +16,7 @@ function RegisterPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setError("");
     setIsSubmitting(true);
 
@@ -28,18 +31,21 @@ function RegisterPage() {
         password,
       });
 
-      // The registration endpoint sends the JWT in a response header.
+      // Registration returns the JWT in the response header.
       const token = response.headers["x-auth-token"];
 
-      if (!token) {
+      if (typeof token !== "string" || !token) {
         setError(
           "Account created, but no authentication token was received. Please log in.",
         );
+
         navigate("/login", { replace: true });
         return;
       }
 
-      localStorage.setItem("token", token);
+      // Save the token and update the shared authentication state.
+      login(token);
+
       navigate("/movies", { replace: true });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -63,6 +69,7 @@ function RegisterPage() {
           <h1 className="text-3xl font-bold tracking-tight text-white">
             Create your account
           </h1>
+
           <p className="mt-2 text-sm text-slate-400">
             Join Vidly to manage your movie rentals.
           </p>
@@ -76,6 +83,7 @@ function RegisterPage() {
             >
               Full name
             </label>
+
             <input
               id="name"
               type="text"
@@ -97,6 +105,7 @@ function RegisterPage() {
             >
               Email address
             </label>
+
             <input
               id="email"
               type="email"
@@ -116,6 +125,7 @@ function RegisterPage() {
             >
               Password
             </label>
+
             <input
               id="password"
               type="password"

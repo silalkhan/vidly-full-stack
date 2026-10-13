@@ -2,9 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import apiClient from "../services/apiClient";
+import { useAuth } from "../hooks/useAuth";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,6 +15,7 @@ function LoginPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setError("");
     setIsSubmitting(true);
 
@@ -22,8 +25,8 @@ function LoginPage() {
         password,
       });
 
-      // The login endpoint returns the JWT in the response body.
-      localStorage.setItem("token", response.data);
+      // Save the token and update the shared authentication state.
+      login(response.data);
 
       navigate("/movies", { replace: true });
     } catch (err: unknown) {
@@ -48,6 +51,7 @@ function LoginPage() {
           <h1 className="text-3xl font-bold tracking-tight text-white">
             Welcome back
           </h1>
+
           <p className="mt-2 text-sm text-slate-400">
             Sign in to manage your Vidly movie rentals.
           </p>
@@ -61,6 +65,7 @@ function LoginPage() {
             >
               Email address
             </label>
+
             <input
               id="email"
               type="email"
@@ -80,6 +85,7 @@ function LoginPage() {
             >
               Password
             </label>
+
             <input
               id="password"
               type="password"

@@ -120,30 +120,36 @@
 
 // export default MoviesPage;
 //updated code without mock data
-
 import { useState } from "react";
 import { useMovies } from "../hooks/useMovies";
 import { useGenres } from "../hooks/useGenres";
 import { useAddMovie } from "../hooks/useAddMovie";
 import { useUpdateMovie } from "../hooks/useUpdateMovie";
 import { useDeleteMovie } from "../hooks/useDeleteMovie";
+import { useAuth } from "../hooks/useAuth";
 import MovieList from "../components/MovieList";
+import LoginRequiredNotice from "../components/LoginRequiredNotice";
 import type { Movie } from "../types/Movie";
 
 function MoviesPage() {
   const { data: movies = [], isLoading, error } = useMovies();
-
   const { data: genres = [] } = useGenres();
 
   const addMovie = useAddMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
 
-  // Search and genre filter state
+  // Check authentication and administrator permissions.
+  const { isAuthenticated, isAdmin } = useAuth();
+
+  // Control the login-required notification.
+  const [showLoginNotice, setShowLoginNotice] = useState(false);
+
+  // Search and genre filter state.
   const [search, setSearch] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("All");
 
-  // Form state
+  // Add/Edit form state.
   const [showForm, setShowForm] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [title, setTitle] = useState("");
@@ -153,7 +159,7 @@ function MoviesPage() {
 
   const genreOptions = ["All", ...genres.map((genre) => genre.name)];
 
-  // Clear form fields
+  // Clear form fields.
   const clearFormFields = () => {
     setTitle("");
     setGenreId("");
@@ -162,7 +168,7 @@ function MoviesPage() {
     setSelectedMovie(null);
   };
 
-  // Reset and close the form
+  // Reset and close the form.
   const resetForm = () => {
     clearFormFields();
     setShowForm(false);
@@ -170,16 +176,30 @@ function MoviesPage() {
     updateMovie.reset();
   };
 
-  // Open a blank form for adding a movie
+  // Open the Add Movie form.
   const handleAddClick = () => {
+    if (!isAuthenticated) {
+      setShowLoginNotice(true);
+      return;
+    }
+
+    if (!isAdmin) return;
+
     clearFormFields();
     addMovie.reset();
     updateMovie.reset();
     setShowForm(true);
   };
 
-  // Open the form with the selected movie's data
+  // Open the Edit Movie form.
   const handleEditMovie = (movie: Movie) => {
+    if (!isAuthenticated) {
+      setShowLoginNotice(true);
+      return;
+    }
+
+    if (!isAdmin) return;
+
     addMovie.reset();
     updateMovie.reset();
 
@@ -191,8 +211,15 @@ function MoviesPage() {
     setShowForm(true);
   };
 
-  // Delete a movie
+  // Delete a movie after checking permissions and confirmation.
   const handleDeleteMovie = (movie: Movie) => {
+    if (!isAuthenticated) {
+      setShowLoginNotice(true);
+      return;
+    }
+
+    if (!isAdmin) return;
+
     const confirmed = window.confirm(
       `Are you sure you want to delete "${movie.title}"?`,
     );
@@ -202,7 +229,7 @@ function MoviesPage() {
     deleteMovie.mutate(movie._id);
   };
 
-  // Handle successful add or update
+  // Close the form after a successful add or update.
   const handleSuccess = () => {
     setSearch("");
     setSelectedGenre("All");
@@ -210,11 +237,21 @@ function MoviesPage() {
     setShowForm(false);
   };
 
-  // Submit the form for adding or editing
-  const handleSubmit = (
-    e: Parameters<NonNullable<React.ComponentProps<"form">["onSubmit"]>>[0],
-  ) => {
+  // Submit the form to add or update a movie.
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Protect the form against unauthorized submissions.
+    if (!isAuthenticated) {
+      setShowForm(false);
+      setShowLoginNotice(true);
+      return;
+    }
+
+    if (!isAdmin) {
+      setShowForm(false);
+      return;
+    }
 
     const movieData = {
       title: title.trim(),
@@ -223,9 +260,7 @@ function MoviesPage() {
       dailyRentalRate,
     };
 
-    if (!movieData.title || !movieData.genreId) {
-      return;
-    }
+    if (!movieData.title || !movieData.genreId) return;
 
     if (selectedMovie) {
       updateMovie.mutate(
@@ -244,7 +279,7 @@ function MoviesPage() {
     }
   };
 
-  // Filter movies by title and genre
+  // Filter movies by title and selected genre.
   const filteredMovies = movies.filter((movie) => {
     const matchesSearch = movie.title
       .toLowerCase()
@@ -262,287 +297,292 @@ function MoviesPage() {
 
   const deleteError = deleteMovie.error;
 
-  // Loading state
+  // Loading state.
   if (isLoading) {
     return (
       <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-slate-950">
-        <p className="text-lg font-medium text-indigo-400">Loading movies...</p>
+        {" "}
+        <p className="text-lg font-medium text-indigo-400">
+          Loading movies...{" "}
+        </p>{" "}
       </main>
     );
   }
 
-  // Error state
+  // Error state.
   if (error) {
     return (
       <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-slate-950 p-6">
+        {" "}
         <div className="text-center">
+          {" "}
           <p className="text-lg font-medium text-rose-400">
-            Failed to load movies.
-          </p>
+            Failed to load movies.{" "}
+          </p>{" "}
           <p className="mt-2 text-sm text-slate-400">
-            Check that your backend is running on port 3000.
-          </p>
-        </div>
+            Check that your backend is running and the API URL is correct.{" "}
+          </p>{" "}
+        </div>{" "}
       </main>
     );
   }
 
   return (
-    <main className="min-h-[calc(100vh-73px)] bg-slate-950 p-6 md:p-10">
-      <div className="mx-auto max-w-7xl space-y-8">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
-              Movies Catalog
-            </h1>
-
-            <p className="mt-2 text-sm text-slate-400 sm:text-base">
-              Browse our movie collection and find your next rental.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleAddClick}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/30 transition hover:bg-indigo-500 active:bg-indigo-700"
-          >
-            <span className="text-lg leading-none" aria-hidden="true">
-              +
-            </span>
-            Add Movie
-          </button>
-        </div>
-
-        {/* Add/Edit Movie Form */}
-        {showForm && (
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-100">
-                  {selectedMovie ? "Edit Movie" : "Add a Movie"}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  {selectedMovie
-                    ? "Update the movie details below."
-                    : "Enter the movie details below."}
-                </p>
-              </div>
-
+    <>
+      {" "}
+      <main className="min-h-[calc(100vh-73px)] bg-slate-950 p-6 md:p-10">
+        {" "}
+        <div className="mx-auto max-w-7xl space-y-8">
+          {/* Header */}{" "}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            {" "}
+            <div>
+              {" "}
+              <h1 className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
+                Movies Catalog{" "}
+              </h1>{" "}
+              <p className="mt-2 text-sm text-slate-400 sm:text-base">
+                Browse our movie collection and find your next rental.{" "}
+              </p>{" "}
+            </div>
+            {/* Only administrators can see Add Movie. */}
+            {isAdmin && (
               <button
                 type="button"
-                onClick={resetForm}
-                disabled={isSaving}
-                aria-label="Close form"
-                className="rounded-lg px-3 py-2 text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+                onClick={handleAddClick}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/30 transition hover:bg-indigo-500 active:bg-indigo-700"
               >
-                ✕
+                <span className="text-lg leading-none" aria-hidden="true">
+                  +
+                </span>
+                Add Movie
               </button>
-            </div>
+            )}
+          </div>
+          {/* Add/Edit Movie Form: administrators only. */}
+          {isAdmin && showForm && (
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-100">
+                    {selectedMovie ? "Edit Movie" : "Add a Movie"}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {selectedMovie
+                      ? "Update the movie details below."
+                      : "Enter the movie details below."}
+                  </p>
+                </div>
 
-            {/* Movie Title */}
-            <div className="space-y-2">
-              <label
-                htmlFor="movie-title"
-                className="block text-sm font-medium text-slate-300"
-              >
-                Movie Title
-              </label>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSaving}
+                  aria-label="Close form"
+                  className="rounded-lg px-3 py-2 text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+                >
+                  ✕
+                </button>
+              </div>
 
+              {/* Movie Title */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="movie-title"
+                  className="block text-sm font-medium text-slate-300"
+                >
+                  Movie Title
+                </label>
+                <input
+                  id="movie-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Interstellar"
+                  minLength={1}
+                  maxLength={255}
+                  required
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              {/* Genre */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="movie-genre"
+                  className="block text-sm font-medium text-slate-300"
+                >
+                  Genre
+                </label>
+                <select
+                  id="movie-genre"
+                  value={genreId}
+                  onChange={(e) => setGenreId(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  <option value="" disabled>
+                    Select a genre
+                  </option>
+                  {genres.map((genre) => (
+                    <option key={genre._id} value={genre._id}>
+                      {genre.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Stock and Rental Rate */}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="movie-stock"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    Number in Stock
+                  </label>
+                  <input
+                    id="movie-stock"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={numberInStock}
+                    onChange={(e) => setNumberInStock(Number(e.target.value))}
+                    required
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="movie-rate"
+                    className="block text-sm font-medium text-slate-300"
+                  >
+                    Daily Rental Rate ($)
+                  </label>
+                  <input
+                    id="movie-rate"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={dailyRentalRate}
+                    onChange={(e) => setDailyRentalRate(Number(e.target.value))}
+                    required
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              </div>
+
+              {/* API Error */}
+              {mutationError && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400"
+                >
+                  {mutationError.message ||
+                    "The movie could not be saved. Please try again."}
+                </p>
+              )}
+
+              {/* Form Actions */}
+              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSaving}
+                  className="rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSaving || !genreId || !title.trim()}
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSaving
+                    ? "Saving..."
+                    : selectedMovie
+                      ? "Update Movie"
+                      : "Save Movie"}
+                </button>
+              </div>
+            </form>
+          )}
+          {/* Search and Genre Filter */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="max-w-md flex-1">
               <input
-                id="movie-title"
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Interstellar"
-                minLength={1}
-                maxLength={255}
-                required
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search movies..."
+                aria-label="Search movies"
+                className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 transition-all duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
 
-            {/* Genre */}
-            <div className="space-y-2">
-              <label
-                htmlFor="movie-genre"
-                className="block text-sm font-medium text-slate-300"
-              >
-                Genre
-              </label>
-
-              <select
-                id="movie-genre"
-                value={genreId}
-                onChange={(e) => setGenreId(e.target.value)}
-                required
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-              >
-                <option value="" disabled>
-                  Select a genre
-                </option>
-
-                {genres.map((genre) => (
-                  <option key={genre._id} value={genre._id}>
-                    {genre.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Stock and Rental Rate */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label
-                  htmlFor="movie-stock"
-                  className="block text-sm font-medium text-slate-300"
+            <div
+              className="flex flex-wrap gap-2"
+              aria-label="Filter movies by genre"
+            >
+              {genreOptions.map((genre) => (
+                <button
+                  key={genre}
+                  type="button"
+                  aria-pressed={selectedGenre === genre}
+                  onClick={() => setSelectedGenre(genre)}
+                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-150 ${
+                    selectedGenre === genre
+                      ? "border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-900/30"
+                      : "border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  }`}
                 >
-                  Number in Stock
-                </label>
-
-                <input
-                  id="movie-stock"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={numberInStock}
-                  onChange={(e) => setNumberInStock(Number(e.target.value))}
-                  required
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="movie-rate"
-                  className="block text-sm font-medium text-slate-300"
-                >
-                  Daily Rental Rate ($)
-                </label>
-
-                <input
-                  id="movie-rate"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={dailyRentalRate}
-                  onChange={(e) => setDailyRentalRate(Number(e.target.value))}
-                  required
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
+                  {genre}
+                </button>
+              ))}
             </div>
-
-            {/* API Error */}
-            {mutationError && (
-              <p
-                role="alert"
-                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400"
-              >
-                {mutationError.message ||
-                  "The movie could not be saved. Please try again."}
-              </p>
-            )}
-
-            {/* Form Actions */}
-            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={isSaving}
-                className="rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={isSaving || !genreId || !title.trim()}
-                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSaving
-                  ? "Saving..."
-                  : selectedMovie
-                    ? "Update Movie"
-                    : "Save Movie"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Search and Genre Filter */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="max-w-md flex-1">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search movies..."
-              aria-label="Search movies"
-              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 transition-all duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            />
           </div>
-
-          <div
-            className="flex flex-wrap gap-2"
-            aria-label="Filter movies by genre"
-          >
-            {genreOptions.map((genre) => (
-              <button
-                key={genre}
-                type="button"
-                aria-pressed={selectedGenre === genre}
-                onClick={() => setSelectedGenre(genre)}
-                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-150 ${
-                  selectedGenre === genre
-                    ? "border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-900/30"
-                    : "border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                }`}
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Delete Error */}
-        {deleteError && (
-          <p
-            role="alert"
-            className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400"
-          >
-            {deleteError.message ||
-              "Failed to delete the movie. Please try again."}
-          </p>
-        )}
-
-        {/* Movie Results */}
-        {filteredMovies.length > 0 ? (
-          <MovieList
-            movies={filteredMovies}
-            onEdit={handleEditMovie}
-            onDelete={handleDeleteMovie}
-          />
-        ) : (
-          <div
-            className="rounded-xl border border-slate-800 bg-slate-900/50 px-6 py-12 text-center"
-            role="status"
-          >
-            <h2 className="text-xl font-semibold text-slate-200">
-              No movies found
-            </h2>
-
-            <p className="mt-2 text-sm text-slate-400">
-              Try a different search term or genre.
+          {/* Delete Error */}
+          {deleteError && (
+            <p
+              role="alert"
+              className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400"
+            >
+              {deleteError.message ||
+                "Failed to delete the movie. Please try again."}
             </p>
-          </div>
-        )}
-      </div>
-    </main>
+          )}
+          {/* Movie Results */}
+          {filteredMovies.length > 0 ? (
+            <MovieList
+              movies={filteredMovies}
+              onEdit={isAdmin ? handleEditMovie : undefined}
+              onDelete={isAdmin ? handleDeleteMovie : undefined}
+            />
+          ) : (
+            <div
+              className="rounded-xl border border-slate-800 bg-slate-900/50 px-6 py-12 text-center"
+              role="status"
+            >
+              <h2 className="text-xl font-semibold text-slate-200">
+                No movies found
+              </h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Try a different search term or genre.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+      {/* Show the login/register notice when a guest attempts a restricted action. */}
+      {showLoginNotice && (
+        <LoginRequiredNotice onClose={() => setShowLoginNotice(false)} />
+      )}
+    </>
   );
 }
 

@@ -1,16 +1,23 @@
 const { Movie, validate } = require("../models/movie");
 const { Genre } = require("../models/genre");
-
+const auth = require("../middleware/auth");
+const admin = require("../middleware/admin");
 const express = require("express");
+
 const router = express.Router();
 
+// GET /api/movies
+// Public: anyone can browse the movie catalog.
 router.get("/", async (req, res) => {
   // Return movies sorted by title for predictable client display.
   const movies = await Movie.find().sort("title");
+
   res.send(movies);
 });
 
-router.post("/", async (req, res) => {
+// POST /api/movies
+// Admin only: create a new movie.
+router.post("/", [auth, admin], async (req, res) => {
   // Validate input before resolving the referenced genre.
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
@@ -28,12 +35,15 @@ router.post("/", async (req, res) => {
     numberInStock: req.body.numberInStock,
     dailyRentalRate: req.body.dailyRentalRate,
   });
+
   await movie.save();
 
   res.send(movie);
 });
 
-router.put("/:id", async (req, res) => {
+// PUT /api/movies/:id
+// Admin only: update an existing movie.
+router.put("/:id", [auth, admin], async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
@@ -51,30 +61,36 @@ router.put("/:id", async (req, res) => {
       numberInStock: req.body.numberInStock,
       dailyRentalRate: req.body.dailyRentalRate,
     },
-    { new: true },
+    { new: true, runValidators: true },
   );
 
-  if (!movie)
+  if (!movie) {
     return res.status(404).send("The movie with the given ID was not found.");
+  }
 
   res.send(movie);
 });
 
-router.delete("/:id", async (req, res) => {
-  // Delete the movie and report when the ID does not exist.
+// DELETE /api/movies/:id
+// Admin only: delete an existing movie.
+router.delete("/:id", [auth, admin], async (req, res) => {
   const movie = await Movie.findByIdAndDelete(req.params.id);
 
-  if (!movie)
+  if (!movie) {
     return res.status(404).send("The movie with the given ID was not found.");
+  }
 
   res.send(movie);
 });
 
+// GET /api/movies/:id
+// Public: retrieve a single movie.
 router.get("/:id", async (req, res) => {
   const movie = await Movie.findById(req.params.id);
 
-  if (!movie)
+  if (!movie) {
     return res.status(404).send("The movie with the given ID was not found.");
+  }
 
   res.send(movie);
 });

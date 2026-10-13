@@ -2,8 +2,8 @@ import type { Movie } from "../types/Movie";
 
 interface MovieCardProps {
   movie: Movie;
-  onEdit: (movie: Movie) => void;
-  onDelete: (movie: Movie) => void;
+  onEdit?: (movie: Movie) => void;
+  onDelete?: (movie: Movie) => void;
 }
 
 function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
@@ -35,23 +35,29 @@ function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
         </p>
       </div>
 
-      <div className="mt-5 space-y-2 border-t border-slate-800 pt-4">
-        <button
-          type="button"
-          onClick={() => onEdit(movie)}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-        >
-          Edit Movie
-        </button>
+      {(onEdit || onDelete) && (
+        <div className="mt-5 space-y-2 border-t border-slate-800 pt-4">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(movie)}
+              className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            >
+              Edit Movie
+            </button>
+          )}
 
-        <button
-          type="button"
-          onClick={() => onDelete(movie)}
-          className="w-full rounded-lg bg-red-600/10 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-600 hover:text-white"
-        >
-          Delete Movie
-        </button>
-      </div>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(movie)}
+              className="w-full rounded-lg bg-red-600/10 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-600 hover:text-white"
+            >
+              Delete Movie
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
