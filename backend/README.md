@@ -7,7 +7,7 @@ Vidly is a Node.js REST API for a video-rental application. It uses Express, Mon
 - User registration and JWT login
 - Genre, customer, movie, rental, and return endpoints
 - Password hashing with bcrypt
-- Admin authorization for deleting genres
+- Admin authorization for movie, genre, customer, rental, and return management
 - Mongoose schemas, model methods, and a rental transaction
 - Request validation and centralized error handling
 - Unit and integration tests
@@ -65,14 +65,17 @@ Copy `.env.example` to `.env` and set values for your machine:
 
 ```env
 NODE_ENV=development
-PORT=3001
+PORT=3003
+CLIENT_ORIGIN=http://localhost:5173
 JWT_PRIVATE_KEY=replace_with_a_long_random_secret
 DB_HOST=172.17.16.1
 DB_NAME=vidly
 DB_REPLICA_SET=
 ```
 
-Tests load `.env.test` through `tests/setup.js`. The test database should be separate from the development database:
+Tests load `.env.test` through `tests/setup.js`. The test database must be
+separate from the development database. Configure `DB_REPLICA_SET` when the
+MongoDB test instance requires it for transactions:
 
 ```env
 NODE_ENV=test
@@ -98,11 +101,14 @@ Start the server with:
 npm start
 ```
 
-The default URL is `http://localhost:3001`. The port can be changed with `PORT`.
+The default URL is `http://localhost:3003`. The port can be changed with `PORT`.
 
 ## Authentication
 
-Login returns a JWT. Send that token in the `x-auth-token` header for protected routes.
+Login returns a JWT in the response body. Registration returns the created user
+in the response body and the JWT in the `x-auth-token` response header. CORS
+exposes that header to browser clients. Send the JWT in the `x-auth-token`
+request header. Tokens expire after one day.
 
 ```mermaid
 sequenceDiagram
@@ -159,8 +165,8 @@ Login body:
 | --- | --- | --- | --- |
 | `GET` | `/api/genres` | No | List genres |
 | `GET` | `/api/genres/:id` | No | Get one genre |
-| `POST` | `/api/genres` | Yes | Create a genre |
-| `PUT` | `/api/genres/:id` | Yes | Update a genre |
+| `POST` | `/api/genres` | Yes + admin | Create a genre |
+| `PUT` | `/api/genres/:id` | Yes + admin | Update a genre |
 | `DELETE` | `/api/genres/:id` | Yes + admin | Delete a genre |
 
 ```json
@@ -173,11 +179,11 @@ Login body:
 
 | Method | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/customers` | No | List customers |
-| `GET` | `/api/customers/:id` | No | Get one customer |
-| `POST` | `/api/customers` | No | Create a customer |
-| `PUT` | `/api/customers/:id` | No | Update a customer |
-| `DELETE` | `/api/customers/:id` | No | Delete a customer |
+| `GET` | `/api/customers` | Yes + admin | List customers |
+| `GET` | `/api/customers/:id` | Yes + admin | Get one customer |
+| `POST` | `/api/customers` | Yes + admin | Create a customer |
+| `PUT` | `/api/customers/:id` | Yes + admin | Update a customer |
+| `DELETE` | `/api/customers/:id` | Yes + admin | Delete a customer |
 
 ```json
 {
@@ -193,9 +199,9 @@ Login body:
 | --- | --- | --- | --- |
 | `GET` | `/api/movies` | No | List movies |
 | `GET` | `/api/movies/:id` | No | Get one movie |
-| `POST` | `/api/movies` | No | Create a movie |
-| `PUT` | `/api/movies/:id` | No | Update a movie |
-| `DELETE` | `/api/movies/:id` | No | Delete a movie |
+| `POST` | `/api/movies` | Yes + admin | Create a movie |
+| `PUT` | `/api/movies/:id` | Yes + admin | Update a movie |
+| `DELETE` | `/api/movies/:id` | Yes + admin | Delete a movie |
 
 ```json
 {
@@ -210,9 +216,9 @@ Login body:
 
 | Method | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/rentals` | No | List rentals |
-| `GET` | `/api/rentals/:id` | No | Get one rental |
-| `POST` | `/api/rentals` | No | Create a rental |
+| `GET` | `/api/rentals` | Yes + admin | List rentals |
+| `GET` | `/api/rentals/:id` | Yes + admin | Get one rental |
+| `POST` | `/api/rentals` | Yes + admin | Create a rental |
 
 Create rental body:
 
@@ -232,8 +238,8 @@ flowchart TD
     C --> D{Movie in stock?}
     D -->|No| E[400 Movie not in stock]
     D -->|Yes| F[Start transaction]
-    F --> G[Save rental]
-    G --> H[Decrease movie stock]
+    F --> G[Conditionally decrease movie stock]
+    G --> H[Save rental]
     H --> I[Commit transaction]
     G -->|Failure| J[Abort transaction]
     H -->|Failure| J
@@ -243,7 +249,7 @@ flowchart TD
 
 | Method | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
-| `POST` | `/api/returns` | Yes | Return a rental |
+| `POST` | `/api/returns` | Yes + admin | Return a rental |
 
 ```json
 {
@@ -254,7 +260,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Authenticated request] --> B[Validate customerId and movieId]
+    A[Authenticated admin request] --> B[Validate customerId and movieId]
     B --> C[Find rental]
     C -->|Missing| D[404 Rental not found]
     C --> E{Already returned?}
@@ -356,6 +362,7 @@ Current test files:
 ```text
 tests/
 ├── integration/
+│   ├── authorization.test.js
 │   ├── auth.test.js
 │   ├── genres.test.js
 │   ├── returns.test.js

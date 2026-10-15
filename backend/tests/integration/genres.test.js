@@ -67,7 +67,7 @@ describe("/api/genres", () => {
     };
 
     beforeEach(() => {
-      token = new User().generateAuthToken();
+      token = new User({ isAdmin: true }).generateAuthToken();
       name = "genre1";
     });
 
@@ -77,6 +77,14 @@ describe("/api/genres", () => {
       const res = await exec();
 
       expect(res.status).toBe(401);
+    });
+
+    it("should return 403 if user is not an admin", async () => {
+      token = new User({ isAdmin: false }).generateAuthToken();
+
+      const res = await exec();
+
+      expect(res.status).toBe(403);
     });
 
     it("should return 400 if genre is less than 5 characters", async () => {
@@ -129,7 +137,7 @@ describe("/api/genres", () => {
       genre = new Genre({ name: "genre1" });
       await genre.save();
 
-      token = new User().generateAuthToken();
+      token = new User({ isAdmin: true }).generateAuthToken();
       id = genre._id;
       newName = "updatedName";
     });
@@ -140,6 +148,14 @@ describe("/api/genres", () => {
       const res = await exec();
 
       expect(res.status).toBe(401);
+    });
+
+    it("should return 403 if user is not an admin", async () => {
+      token = new User({ isAdmin: false }).generateAuthToken();
+
+      const res = await exec();
+
+      expect(res.status).toBe(403);
     });
 
     it("should return 400 if genre is less than 5 characters", async () => {

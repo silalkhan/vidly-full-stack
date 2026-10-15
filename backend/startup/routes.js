@@ -10,7 +10,12 @@ const returns = require("../routes/returns");
 const cors = require("cors");
 
 module.exports = function (app) {
-  app.use(cors());
+  app.use(
+    cors({
+      origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+      exposedHeaders: ["x-auth-token"],
+    }),
+  );
   // Parse JSON request bodies before they reach the route handlers.
   app.use(express.json());
   // Mount each feature router under its public API prefix.

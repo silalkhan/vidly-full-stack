@@ -4,9 +4,10 @@ const { Rental } = require("../../models/rental");
 const { Movie } = require("../../models/movie");
 const { User } = require("../../models/user");
 const mongoose = require("mongoose");
+const app = require("../../app");
+const { connectTestDatabase, closeTestDatabase } = require("./setup");
 
 describe("/api/returns", () => {
-  let server;
   let customerId;
   let movieId;
   let rental;
@@ -14,18 +15,19 @@ describe("/api/returns", () => {
   let token;
 
   const exec = () => {
-    return request(server)
+    return request(app)
       .post("/api/returns")
       .set("x-auth-token", token)
       .send({ customerId, movieId });
   };
 
-  beforeEach(async () => {
-    server = require("../../index");
+  beforeAll(connectTestDatabase);
+  afterAll(closeTestDatabase);
 
+  beforeEach(async () => {
     customerId = new mongoose.Types.ObjectId();
     movieId = new mongoose.Types.ObjectId();
-    token = new User().generateAuthToken();
+    token = new User({ isAdmin: true }).generateAuthToken();
 
     movie = new Movie({
       _id: movieId,
@@ -52,7 +54,6 @@ describe("/api/returns", () => {
   });
 
   afterEach(async () => {
-    await server.close();
     await Rental.deleteMany({});
     await Movie.deleteMany({});
   });
@@ -63,6 +64,14 @@ describe("/api/returns", () => {
     const res = await exec();
 
     expect(res.status).toBe(401);
+  });
+
+  it("should return 403 if client is not an admin", async () => {
+    token = new User({ isAdmin: false }).generateAuthToken();
+
+    const res = await exec();
+
+    expect(res.status).toBe(403);
   });
 
   it("should return 400 if customerId is not provided", async () => {

@@ -4,8 +4,8 @@ const winston = require("winston");
 const app = require("./app");
 const connectDB = require("./startup/db");
 
-// Use the configured port, or 3001 when no port is provided.
-const port = process.env.PORT || 3001;
+// Use the configured port, or 3003 to match the frontend API client.
+const port = process.env.PORT || 3003;
 
 // Begin accepting requests as soon as the application is configured.
 const server = app.listen(port, () => {

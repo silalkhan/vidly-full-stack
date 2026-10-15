@@ -16,5 +16,6 @@ describe("user.generateAuthToken", () => {
     const token = user.generateAuthToken();
     const decoded = jwt.verify(token, config.get("JWT_PRIVATE_KEY"));
     expect(decoded).toMatchObject(payload);
+    expect(decoded.exp - decoded.iat).toBe(24 * 60 * 60);
   });
 });

@@ -65,14 +65,12 @@ const rentalSchema = new mongoose.Schema({
   },
 });
 
-// Find an active rental for the specified customer and movie.
-// Excluding returned rentals prevents an old rental from being selected.
+// Find the most recent rental so repeated returns can be rejected explicitly.
 rentalSchema.statics.lookup = function (customerId, movieId) {
   return this.findOne({
     "customer._id": customerId,
     "movie._id": movieId,
-    dateReturned: { $exists: false },
-  });
+  }).sort("-dateOut");
 };
 
 // Mark the rental as returned and calculate its fee.

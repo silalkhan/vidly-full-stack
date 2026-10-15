@@ -1,20 +1,22 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import apiClient from "../services/apiClient";
 import { useAuth } from "../hooks/useAuth";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") ?? "");
 
     setError("");
     setIsSubmitting(true);
@@ -28,7 +30,16 @@ function LoginPage() {
       // Save the token and update the shared authentication state.
       login(response.data);
 
-      navigate("/movies", { replace: true });
+      const from = (
+        location.state as
+          | { from?: { pathname?: string; search?: string; hash?: string } }
+          | null
+      )?.from;
+      const destination =
+        from?.pathname?.startsWith("/") && !from.pathname.startsWith("//")
+          ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`
+          : "/movies";
+      navigate(destination, { replace: true });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(
@@ -89,10 +100,9 @@ function LoginPage() {
             <input
               id="password"
               type="password"
+              name="password"
               autoComplete="current-password"
               required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
               placeholder="Enter your password"
               className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />

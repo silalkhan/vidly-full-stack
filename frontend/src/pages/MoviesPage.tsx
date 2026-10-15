@@ -55,7 +55,7 @@
 //       <div className="mx-auto max-w-7xl space-y-8">
 //         {/* Header */}
 //         <div>
-//           <h1 className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
+//           <h1 className="bg-linear-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
 //             Movies Catalog
 //           </h1>
 //           <p className="mt-2 text-sm text-slate-400 sm:text-base">
@@ -130,6 +130,7 @@ import { useAuth } from "../hooks/useAuth";
 import MovieList from "../components/MovieList";
 import LoginRequiredNotice from "../components/LoginRequiredNotice";
 import type { Movie } from "../types/Movie";
+import { MovieListSkeleton } from "../components/LoadingSkeletons";
 
 function MoviesPage() {
   const { data: movies = [], isLoading, error } = useMovies();
@@ -300,11 +301,14 @@ function MoviesPage() {
   // Loading state.
   if (isLoading) {
     return (
-      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-slate-950">
-        {" "}
-        <p className="text-lg font-medium text-indigo-400">
-          Loading movies...{" "}
-        </p>{" "}
+      <main className="min-h-[calc(100vh-73px)] bg-slate-950 p-6 md:p-10">
+        <div className="mx-auto max-w-7xl space-y-8">
+          <div aria-hidden="true">
+            <div className="mb-3 h-9 w-64 rounded bg-slate-800 motion-safe:animate-pulse" />
+            <div className="h-4 w-80 max-w-full rounded bg-slate-800 motion-safe:animate-pulse" />
+          </div>
+          <MovieListSkeleton />
+        </div>
       </main>
     );
   }
@@ -338,7 +342,7 @@ function MoviesPage() {
             {" "}
             <div>
               {" "}
-              <h1 className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
+              <h1 className="bg-linear-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
                 Movies Catalog{" "}
               </h1>{" "}
               <p className="mt-2 text-sm text-slate-400 sm:text-base">

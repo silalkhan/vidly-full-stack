@@ -10,6 +10,9 @@ import CustomersPage from "./pages/CustomersPage";
 import RentalsPage from "./pages/RentalsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ProfilePage from "./pages/ProfilePage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import GenresPage from "./pages/GenresPage";
 
 function App() {
   return (
@@ -26,6 +29,13 @@ function App() {
 
             {/* Protected routes: login required */}
             <Route element={<ProtectedRoute />}>
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+
+            {/* Management routes are protected by both authentication and role. */}
+            <Route element={<ProtectedRoute adminOnly />}>
+              <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/genres" element={<GenresPage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/rentals" element={<RentalsPage />} />
             </Route>

@@ -4,13 +4,14 @@ const validate = require("../middleware/validate");
 const { Rental } = require("../models/rental");
 const { Movie } = require("../models/movie");
 const auth = require("../middleware/auth");
+const admin = require("../middleware/admin");
 const express = require("express");
 
 const router = express.Router();
 
 // POST /api/returns
 // Return a rented movie and increase its stock by 1.
-router.post("/", [auth, validate(validateReturn)], async (req, res) => {
+router.post("/", [auth, admin, validate(validateReturn)], async (req, res) => {
   // Start a MongoDB session so multiple database operations
   // can be handled together in one transaction.
   const session = await mongoose.startSession();
@@ -82,7 +83,7 @@ router.post("/", [auth, validate(validateReturn)], async (req, res) => {
 });
 
 // Validate the customerId and movieId received in the request body.
-function validateReturn(req) {
+function validateReturn(body) {
   const schema = Joi.object({
     customerId: Joi.string()
       // A MongoDB ObjectId is represented by 24 hexadecimal characters.
@@ -101,7 +102,7 @@ function validateReturn(req) {
   });
 
   // Validate the request body against the schema.
-  return schema.validate(req.body);
+  return schema.validate(body);
 }
 
 module.exports = router;

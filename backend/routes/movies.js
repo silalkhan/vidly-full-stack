@@ -2,6 +2,7 @@ const { Movie, validate } = require("../models/movie");
 const { Genre } = require("../models/genre");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
+const validateObjectId = require("../middleware/validateObjectId");
 const express = require("express");
 
 const router = express.Router();
@@ -43,7 +44,7 @@ router.post("/", [auth, admin], async (req, res) => {
 
 // PUT /api/movies/:id
 // Admin only: update an existing movie.
-router.put("/:id", [auth, admin], async (req, res) => {
+router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
@@ -73,7 +74,7 @@ router.put("/:id", [auth, admin], async (req, res) => {
 
 // DELETE /api/movies/:id
 // Admin only: delete an existing movie.
-router.delete("/:id", [auth, admin], async (req, res) => {
+router.delete("/:id", [auth, admin, validateObjectId], async (req, res) => {
   const movie = await Movie.findByIdAndDelete(req.params.id);
 
   if (!movie) {
@@ -85,7 +86,7 @@ router.delete("/:id", [auth, admin], async (req, res) => {
 
 // GET /api/movies/:id
 // Public: retrieve a single movie.
-router.get("/:id", async (req, res) => {
+router.get("/:id", validateObjectId, async (req, res) => {
   const movie = await Movie.findById(req.params.id);
 
   if (!movie) {

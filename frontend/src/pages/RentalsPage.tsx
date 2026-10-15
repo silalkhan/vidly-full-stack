@@ -5,6 +5,7 @@ import { useReturnRental } from "../hooks/useReturnRental";
 import { useCustomers } from "../hooks/useCustomers";
 import { useMovies } from "../hooks/useMovies";
 import type { Rental } from "../types/Rental";
+import { TableSkeleton } from "../components/LoadingSkeletons";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -96,10 +97,15 @@ function RentalsPage() {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-slate-950">
-        <p className="text-lg font-medium text-indigo-400">
-          Loading rentals...
-        </p>
+      <main className="min-h-[calc(100vh-73px)] bg-slate-950 p-6 md:p-10">
+        <div className="mx-auto max-w-7xl space-y-8">
+          <div aria-hidden="true">
+            <div className="mb-3 h-9 w-48 rounded bg-slate-800 motion-safe:animate-pulse" />
+            <div className="h-4 w-80 max-w-full rounded bg-slate-800 motion-safe:animate-pulse" />
+          </div>
+          <div className="h-48 rounded-xl border border-slate-800 bg-slate-900 motion-safe:animate-pulse" />
+          <TableSkeleton columns={7} rows={6} />
+        </div>
       </main>
     );
   }
@@ -131,7 +137,7 @@ function RentalsPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Page Header */}
         <div>
-          <h1 className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
+          <h1 className="bg-linear-to-r from-indigo-400 to-cyan-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
             Rentals
           </h1>
           <p className="mt-2 text-sm text-slate-400 sm:text-base">
@@ -257,7 +263,7 @@ function RentalsPage() {
 
         {rentals.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
-            <table className="w-full min-w-[1000px] text-left text-sm">
+            <table className="w-full min-w-250 text-left text-sm">
               <thead className="border-b border-slate-800 bg-slate-800/50 text-slate-300">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Customer</th>

@@ -1,9 +1,14 @@
 const { Rental, validate } = require("../models/rental");
 const { Movie } = require("../models/movie");
 const { Customer } = require("../models/customer");
+const auth = require("../middleware/auth");
+const admin = require("../middleware/admin");
+const validateObjectId = require("../middleware/validateObjectId");
 const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
+
+router.use(auth, admin);
 
 router.get("/", async (req, res) => {
   // Show the newest rentals first.
@@ -40,27 +45,36 @@ router.post("/", async (req, res) => {
     },
   });
 
-  // Keep saving the rental and decrementing stock in one transaction.
+  // Keep saving the rental and reserving stock in one transaction.
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    await rental.save({ session });
-    await Movie.updateOne(
-      { _id: movie._id },
+    const stockUpdate = await Movie.updateOne(
+      { _id: movie._id, numberInStock: { $gt: 0 } },
       { $inc: { numberInStock: -1 } },
       { session },
     );
+    if (stockUpdate.matchedCount !== 1) {
+      const error = new Error("Movie not in stock.");
+      error.statusCode = 400;
+      throw error;
+    }
+    await rental.save({ session });
     await session.commitTransaction();
     res.send(rental);
   } catch (ex) {
     await session.abortTransaction();
-    res.status(500).send("Something failed during the rental transaction.");
+    res
+      .status(ex.statusCode || 500)
+      .send(ex.statusCode === 400
+        ? ex.message
+        : "Something failed during the rental transaction.");
   } finally {
     session.endSession();
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", validateObjectId, async (req, res) => {
   // Return one rental or a clear not-found response.
   const rental = await Rental.findById(req.params.id);
   if (!rental)

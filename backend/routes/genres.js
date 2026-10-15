@@ -12,7 +12,7 @@ router.get("/", async (req, res) => {
   res.send(genres);
 });
 
-router.post("/", auth, async (req, res) => {
+router.post("/", [auth, admin], async (req, res) => {
   // Only authenticated users may create genres.
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
@@ -23,7 +23,7 @@ router.post("/", auth, async (req, res) => {
   res.send(genre);
 });
 
-router.put("/:id", [validateObjectId, auth], async (req, res) => {
+router.put("/:id", [validateObjectId, auth, admin], async (req, res) => {
   // Validate the ID and body before replacing the genre name.
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);

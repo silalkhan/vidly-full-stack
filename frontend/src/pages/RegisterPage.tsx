@@ -10,12 +10,13 @@ function RegisterPage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") ?? "");
 
     setError("");
     setIsSubmitting(true);
@@ -89,7 +90,7 @@ function RegisterPage() {
               type="text"
               autoComplete="name"
               required
-              minLength={3}
+              minLength={5}
               maxLength={50}
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -129,12 +130,11 @@ function RegisterPage() {
             <input
               id="password"
               type="password"
+              name="password"
               autoComplete="new-password"
               required
               minLength={5}
               maxLength={255}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
               placeholder="Create a password"
               className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />

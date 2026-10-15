@@ -4,7 +4,9 @@ import { useAuth } from "../hooks/useAuth";
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const { token, isAdmin, isLoading, user, logout } = useAuth();
+  const isAuthenticated = Boolean(token);
   const navigate = useNavigate();
 
   const baseStyle =
@@ -20,8 +22,37 @@ const NavBar = () => {
   function handleLogout() {
     logout();
     closeMenu();
+    setIsProfileMenuOpen(false);
     navigate("/login", { replace: true });
   }
+
+  function closeMenus() {
+    closeMenu();
+    setIsProfileMenuOpen(false);
+  }
+
+  const navLinks = (
+    <>
+      <NavLink to="/movies" className={getLinkStyle} onClick={closeMenus}>
+        Movies
+      </NavLink>
+      {isAuthenticated && (
+        <>
+          <NavLink to="/customers" className={getLinkStyle} onClick={closeMenus}>
+            Customers
+          </NavLink>
+          <NavLink to="/rentals" className={getLinkStyle} onClick={closeMenus}>
+            Rentals
+          </NavLink>
+        </>
+      )}
+      {isAdmin && (
+        <NavLink to="/admin" className={getLinkStyle} onClick={closeMenus}>
+          Admin
+        </NavLink>
+      )}
+    </>
+  );
 
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-900 px-6 py-4">
@@ -30,46 +61,56 @@ const NavBar = () => {
           <Link
             to="/"
             onClick={closeMenu}
-            className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-2xl font-black tracking-wider text-transparent hover:opacity-90"
+            className="bg-linear-to-r from-indigo-400 to-cyan-400 bg-clip-text text-2xl font-black tracking-wider text-transparent hover:opacity-90"
           >
             VIDLY
           </Link>
 
-          {/* Desktop navigation */}
-          <div className="hidden items-center space-x-4 md:flex">
-            {isAuthenticated && (
-              <>
-                <NavLink to="/movies" className={getLinkStyle}>
-                  Movies
-                </NavLink>
+          <div className="hidden items-center space-x-2 md:flex">{navLinks}</div>
 
-                <NavLink to="/customers" className={getLinkStyle}>
-                  Customers
-                </NavLink>
-
-                <NavLink to="/rentals" className={getLinkStyle}>
-                  Rentals
-                </NavLink>
-              </>
-            )}
-          </div>
-
-          {/* Desktop authentication links */}
-          <div className="hidden items-center space-x-3 md:flex">
+          <div className="flex items-center gap-3">
             {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400"
-              >
-                Logout
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen((open) => !open)}
+                  className="rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-indigo-500/60 hover:bg-slate-800"
+                  aria-haspopup="menu"
+                  aria-expanded={isProfileMenuOpen}
+                >
+                  {user?.name ?? (isLoading ? "Loading profile..." : "Account")}
+                </button>
+                {isProfileMenuOpen && (
+                  <div
+                    role="menu"
+                    aria-label="Account menu"
+                    className="absolute right-0 z-50 mt-2 w-44 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-xl"
+                  >
+                    <Link
+                      to="/profile"
+                      role="menuitem"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="block rounded-lg px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-rose-400 hover:bg-rose-500/10"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 <NavLink
                   to="/login"
                   className={({ isActive }) =>
-                    `px-4 py-2 text-sm font-medium transition-colors ${
+                    `px-3 py-2 text-sm font-medium transition-colors ${
                       isActive
                         ? "text-indigo-400"
                         : "text-slate-400 hover:text-slate-100"
@@ -78,91 +119,35 @@ const NavBar = () => {
                 >
                   Login
                 </NavLink>
-
                 <Link
                   to="/register"
-                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-900/30 transition-all duration-150 hover:bg-indigo-500 active:bg-indigo-700"
+                  className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
                 >
                   Register
                 </Link>
               </>
             )}
-          </div>
 
-          {/* Mobile menu button */}
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="rounded-md p-2 text-slate-300 hover:bg-slate-800 hover:text-white md:hidden"
-            aria-label="Toggle navigation menu"
-            aria-expanded={isMenuOpen}
-          >
-            {isMenuOpen ? "✕" : "☰"}
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              className="rounded-md p-2 text-slate-300 hover:bg-slate-800 hover:text-white md:hidden"
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMenuOpen}
+            >
+              {isMenuOpen ? "✕" : "☰"}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile navigation */}
         {isMenuOpen && (
-          <div className="mt-4 border-t border-slate-800 pt-4 md:hidden">
-            <div className="flex flex-col space-y-2">
-              {isAuthenticated && (
-                <>
-                  <NavLink
-                    to="/movies"
-                    className={getLinkStyle}
-                    onClick={closeMenu}
-                  >
-                    Movies
-                  </NavLink>
-
-                  <NavLink
-                    to="/customers"
-                    className={getLinkStyle}
-                    onClick={closeMenu}
-                  >
-                    Customers
-                  </NavLink>
-
-                  <NavLink
-                    to="/rentals"
-                    className={getLinkStyle}
-                    onClick={closeMenu}
-                  >
-                    Rentals
-                  </NavLink>
-                </>
-              )}
-
-              <div className="mt-2 flex flex-col gap-2 border-t border-slate-800 pt-3">
-                {isAuthenticated ? (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-xl border border-slate-700 px-4 py-2 text-left text-sm font-semibold text-slate-300 transition hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400"
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <>
-                    <NavLink
-                      to="/login"
-                      className={getLinkStyle}
-                      onClick={closeMenu}
-                    >
-                      Login
-                    </NavLink>
-
-                    <Link
-                      to="/register"
-                      onClick={closeMenu}
-                      className="rounded-xl bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-indigo-500"
-                    >
-                      Register
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
+          <div className="mt-4 flex flex-col border-t border-slate-800 pt-4 md:hidden">
+            {navLinks}
+            {isAuthenticated && user && (
+              <p className="mt-2 border-t border-slate-800 px-3 pt-3 text-xs text-slate-500">
+                Signed in as {user.name}
+              </p>
+            )}
           </div>
         )}
       </div>
