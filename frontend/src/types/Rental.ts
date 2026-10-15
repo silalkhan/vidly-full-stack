@@ -13,10 +13,14 @@ dailyRentalRate: number;
 }
 
 export interface Rental {
-_id: string;
-customer: RentalCustomer;
-movie: RentalMovie;
-dateOut: string;
-dateReturned?: string;
-rentalFee?: number;
+  _id: string;
+  customer: RentalCustomer;
+  movie: RentalMovie;
+  dateOut: string;
+  dateReturned?: string;
+  rentalFee?: number;
+  isArchived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
+  archiveReason?: string;
 }

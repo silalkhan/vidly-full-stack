@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useCustomers } from "../hooks/useCustomers";
 import { useGenres } from "../hooks/useGenres";
@@ -14,16 +15,24 @@ function AdminDashboardPage() {
   const isLoading = queries.some((query) => query.isLoading);
   const hasError = queries.some((query) => query.isError);
 
-  const stats = [
-    { label: "Total movies", value: movies.data?.length, href: "/movies" },
-    { label: "Total genres", value: genres.data?.length, href: "/genres" },
-    {
-      label: "Total customers",
-      value: customers.data?.length,
-      href: "/customers",
-    },
-    { label: "Total rentals", value: rentals.data?.length, href: "/rentals" },
-  ];
+  const stats = useMemo(() => {
+    const allRentals = rentals.data ?? [];
+    const activeRentals = allRentals.filter((rental) => !rental.dateReturned).length;
+    const returnedRentals = allRentals.filter((rental) => rental.dateReturned).length;
+
+    return [
+      { label: "Total movies", value: movies.data?.length ?? 0, href: "/movies" },
+      { label: "Total genres", value: genres.data?.length ?? 0, href: "/genres" },
+      {
+        label: "Total customers",
+        value: customers.data?.length ?? 0,
+        href: "/customers",
+      },
+      { label: "Total rentals", value: allRentals.length, href: "/rentals" },
+      { label: "Active rentals", value: activeRentals, href: "/rentals" },
+      { label: "Returned rentals", value: returnedRentals, href: "/rentals" },
+    ];
+  }, [customers.data, genres.data, movies.data, rentals.data]);
 
   return (
     <main className="min-h-[calc(100vh-73px)] bg-slate-950 p-6 md:p-10">
@@ -33,7 +42,7 @@ function AdminDashboardPage() {
             Admin Dashboard
           </h1>
           <p className="mt-2 text-sm text-slate-400">
-            A summary of the Vidly catalog and rental activity.
+            A live summary of Vidly catalog and rental activity.
           </p>
         </header>
 
@@ -44,13 +53,12 @@ function AdminDashboardPage() {
             role="alert"
             className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-5 text-rose-300"
           >
-            Dashboard data could not be loaded. Check the API connection and
-            refresh the page.
+            Dashboard data could not be loaded. Check the API connection and refresh the page.
           </section>
         ) : (
           <section
             aria-label="Dashboard statistics"
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
           >
             {stats.map((stat) => (
               <Link
@@ -59,18 +67,14 @@ function AdminDashboardPage() {
                 className="rounded-xl border border-slate-800 bg-slate-900 p-5 transition hover:border-indigo-500/50"
               >
                 <p className="text-sm text-slate-400">{stat.label}</p>
-                <p className="mt-2 text-3xl font-bold text-slate-100">
-                  {stat.value ?? 0}
-                </p>
+                <p className="mt-2 text-3xl font-bold text-slate-100">{stat.value}</p>
               </Link>
             ))}
           </section>
         )}
 
         <section>
-          <h2 className="mb-4 text-xl font-bold text-slate-100">
-            Quick actions
-          </h2>
+          <h2 className="mb-4 text-xl font-bold text-slate-100">Quick actions</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { label: "Manage movies", href: "/movies" },
@@ -126,14 +130,10 @@ function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {rentals.data.slice(0, 5).map((rental) => (
+                  {(rentals.data ?? []).slice(0, 5).map((rental) => (
                     <tr key={rental._id}>
-                      <td className="py-3 text-slate-200">
-                        {rental.customer.name}
-                      </td>
-                      <td className="py-3 text-slate-300">
-                        {rental.movie.title}
-                      </td>
+                      <td className="py-3 text-slate-200">{rental.customer.name}</td>
+                      <td className="py-3 text-slate-300">{rental.movie.title}</td>
                       <td className="py-3 text-slate-400">
                         {new Date(rental.dateOut).toLocaleDateString()}
                       </td>

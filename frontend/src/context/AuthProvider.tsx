@@ -21,6 +21,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await apiClient.get<AuthenticatedUser>("/users/me");
       return response.data;
     },
+    // A saved token is only an identity hint until the API verifies it and
+    // returns the current profile and role.
     enabled: Boolean(token),
     retry: false,
     staleTime: 5 * 60 * 1000,
@@ -29,6 +31,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     setToken(null);
+    // Remove cached private data as well, so another account cannot see it.
     queryClient.clear();
   }, [queryClient]);
 

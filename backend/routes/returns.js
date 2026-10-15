@@ -3,90 +3,97 @@ const mongoose = require("mongoose");
 const validate = require("../middleware/validate");
 const { Rental } = require("../models/rental");
 const { Movie } = require("../models/movie");
+const { Customer } = require("../models/customer");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 const express = require("express");
 
 const router = express.Router();
 
-// POST /api/returns
-// Return a rented movie and increase its stock by 1.
+router.post("/me", [auth, validate(validateReturnForUser)], async (req, res) => {
+  // Resolve the customer from the authenticated user so callers cannot return
+  // rentals belonging to another customer by changing the request body.
+  const customer = await Customer.findByUserId(req.user._id);
+  if (!customer) {
+    return res.status(403).send("No customer record is linked to this account.");
+  }
+
+  return completeReturn(
+    req,
+    res,
+    customer._id.toString(),
+    req.body.rentalId,
+  );
+});
+
 router.post("/", [auth, admin, validate(validateReturn)], async (req, res) => {
-  // Start a MongoDB session so multiple database operations
-  // can be handled together in one transaction.
+  return completeReturn(req, res, req.body.customerId);
+});
+
+async function completeReturn(req, res, customerId, rentalId) {
   const session = await mongoose.startSession();
 
   try {
-    // Store the rental that will be returned to the client.
     let returnedRental;
 
-    // A transaction ensures that either all database changes succeed
-    // or none of them are committed.
+    // Rental status, return fee, and movie stock must commit or roll back
+    // together so a failed return cannot leave stock and history inconsistent.
     await session.withTransaction(async () => {
-      // Find the rental using the customer's ID and the movie's ID.
-      const rental = await Rental.lookup(req.body.customerId, req.body.movieId);
+      const rental = rentalId
+        ? await Rental.findOne({
+            _id: rentalId,
+            "customer._id": customerId,
+          }).session(session)
+        : await Rental.lookup(customerId, req.body.movieId).session(session);
 
-      // Stop if no matching rental exists.
       if (!rental) {
         const error = new Error("Rental not found.");
         error.statusCode = 404;
         throw error;
       }
 
-      // Prevent returning the same rental twice.
-      // Otherwise, the movie stock could increase more than once.
       if (rental.dateReturned) {
         const error = new Error("Return already processed.");
         error.statusCode = 400;
         throw error;
       }
 
-      // Get the movie's ID from the rental document.
+      if (!req.user.isAdmin && rental.customer._id.toString() !== customerId.toString()) {
+        const error = new Error("You do not have access to this rental.");
+        error.statusCode = 403;
+        throw error;
+      }
+
       const movieId = rental.movie._id;
-
-      // Set the return date and calculate any applicable rental fee.
       rental.return();
-
-      // Save the updated rental using the same transaction.
       await rental.save({ session });
 
-      // Increase the movie's available stock by 1.
-      // The session keeps this update part of the transaction.
       const result = await Movie.updateOne(
         { _id: movieId },
         { $inc: { numberInStock: 1 } },
         { session },
       );
 
-      // Ensure that a movie document matched the update query.
-      // If not, throw an error so the transaction is aborted.
       if (result.matchedCount !== 1) {
         throw new Error("Movie not found; stock was not updated.");
       }
 
-      // Keep the updated rental so we can send it in the response.
       returnedRental = rental;
     });
 
-    // Send the successfully returned rental to the frontend.
     return res.send(returnedRental);
   } catch (error) {
-    // Send an appropriate HTTP status and error message.
-    // Errors without a custom status code receive status 500.
     return res
       .status(error.statusCode || 500)
       .send(error.message || "Failed to return movie.");
   } finally {
-    // Always close the session, even if an error occurs.
     await session.endSession();
   }
-});
+}
 
-// Validate the customerId and movieId received in the request body.
 function validateReturn(body) {
   const schema = Joi.object({
     customerId: Joi.string()
-      // A MongoDB ObjectId is represented by 24 hexadecimal characters.
       .regex(/^[0-9a-fA-F]{24}$/)
       .required()
       .messages({
@@ -101,7 +108,28 @@ function validateReturn(body) {
       }),
   });
 
-  // Validate the request body against the schema.
+  return schema.validate(body);
+}
+
+function validateReturnForUser(body) {
+  const schema = Joi.object({
+    rentalId: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .messages({
+        "string.pattern.base": "Invalid Rental ID format.",
+      }),
+    movieId: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .messages({
+        "string.pattern.base": "Invalid Movie ID format.",
+      }),
+  })
+    .xor("rentalId", "movieId")
+    .messages({
+      "object.missing": "A rentalId is required.",
+      "object.xor": "Provide either a rentalId or movieId, not both.",
+    });
+
   return schema.validate(body);
 }
 

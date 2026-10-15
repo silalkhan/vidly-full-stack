@@ -120,12 +120,13 @@
 
 // export default MoviesPage;
 //updated code without mock data
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMovies } from "../hooks/useMovies";
 import { useGenres } from "../hooks/useGenres";
 import { useAddMovie } from "../hooks/useAddMovie";
 import { useUpdateMovie } from "../hooks/useUpdateMovie";
 import { useDeleteMovie } from "../hooks/useDeleteMovie";
+import { useRentMovie } from "../hooks/useRentMovie";
 import { useAuth } from "../hooks/useAuth";
 import MovieList from "../components/MovieList";
 import LoginRequiredNotice from "../components/LoginRequiredNotice";
@@ -139,12 +140,17 @@ function MoviesPage() {
   const addMovie = useAddMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
+  const rentMovie = useRentMovie();
 
   // Check authentication and administrator permissions.
   const { isAuthenticated, isAdmin } = useAuth();
 
   // Control the login-required notification.
   const [showLoginNotice, setShowLoginNotice] = useState(false);
+  const [movieToRent, setMovieToRent] = useState<Movie | null>(null);
+  const [rentFeedback, setRentFeedback] = useState("");
+  const [rentError, setRentError] = useState("");
+  const confirmRentRef = useRef<HTMLButtonElement>(null);
 
   // Search and genre filter state.
   const [search, setSearch] = useState("");
@@ -229,6 +235,66 @@ function MoviesPage() {
 
     deleteMovie.mutate(movie._id);
   };
+
+  const handleRentMovie = (movie: Movie) => {
+    if (!isAuthenticated) {
+      setShowLoginNotice(true);
+      return;
+    }
+
+    if (isAdmin) {
+      return;
+    }
+
+    if (movie.numberInStock <= 0) {
+      setRentError("This movie is currently unavailable.");
+      setRentFeedback("");
+      return;
+    }
+
+    setRentError("");
+    setRentFeedback("");
+    rentMovie.reset();
+    setMovieToRent(movie);
+  };
+
+  const handleConfirmRent = async () => {
+    if (!movieToRent || rentMovie.isPending) return;
+    setRentError("");
+    try {
+      await rentMovie.mutateAsync(movieToRent._id);
+      setRentFeedback(`${movieToRent.title} was rented successfully.`);
+      setMovieToRent(null);
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" && error !== null && "response" in error
+          ? (() => {
+              const response = error.response;
+              return typeof response === "object" &&
+                response !== null &&
+                "data" in response &&
+                typeof response.data === "string"
+                ? response.data
+                : "Rental failed. Please try again.";
+            })()
+          : "Rental failed. Please try again.";
+      setRentError(message);
+    }
+  };
+
+  useEffect(() => {
+    if (!movieToRent) return;
+
+    confirmRentRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !rentMovie.isPending) {
+        setMovieToRent(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [movieToRent, rentMovie.isPending]);
 
   // Close the form after a successful add or update.
   const handleSuccess = () => {
@@ -550,6 +616,23 @@ function MoviesPage() {
               ))}
             </div>
           </div>
+          {rentFeedback && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+            >
+              {rentFeedback}
+            </p>
+          )}
+          {rentError && !movieToRent && (
+            <p
+              role="alert"
+              className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
+            >
+              {rentError}
+            </p>
+          )}
           {/* Delete Error */}
           {deleteError && (
             <p
@@ -566,6 +649,7 @@ function MoviesPage() {
               movies={filteredMovies}
               onEdit={isAdmin ? handleEditMovie : undefined}
               onDelete={isAdmin ? handleDeleteMovie : undefined}
+              onRent={!isAdmin ? handleRentMovie : undefined}
             />
           ) : (
             <div
@@ -582,6 +666,59 @@ function MoviesPage() {
           )}
         </div>
       </main>
+      {movieToRent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rent-confirmation-title"
+            aria-describedby="rent-confirmation-description"
+            className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+          >
+            <h2
+              id="rent-confirmation-title"
+              className="text-xl font-bold text-slate-100"
+            >
+              Confirm rental
+            </h2>
+            <p
+              id="rent-confirmation-description"
+              className="mt-3 text-sm leading-6 text-slate-300"
+            >
+              Rent “{movieToRent.title}” for your account at $
+              {movieToRent.dailyRentalRate.toFixed(2)} per day? The available
+              stock will decrease after the rental is confirmed.
+            </p>
+            {rentError && (
+              <p
+                role="alert"
+                className="mt-4 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-300"
+              >
+                {rentError}
+              </p>
+            )}
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setMovieToRent(null)}
+                disabled={rentMovie.isPending}
+                className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                ref={confirmRentRef}
+                type="button"
+                onClick={() => void handleConfirmRent()}
+                disabled={rentMovie.isPending}
+                className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {rentMovie.isPending ? "Renting movie..." : "Confirm Rental"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
       {/* Show the login/register notice when a guest attempts a restricted action. */}
       {showLoginNotice && (
         <LoginRequiredNotice onClose={() => setShowLoginNotice(false)} />

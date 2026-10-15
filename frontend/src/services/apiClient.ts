@@ -4,7 +4,8 @@ const apiClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL || "http://localhost:3003"}/api`,
 });
 
-//Add an Axios interceptor so every API request automatically includes the saved token.
+// Keep the base URL and token handling in one place so pages and hooks do not
+// each need to build request URLs or attach authentication themselves.
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 

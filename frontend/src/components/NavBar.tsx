@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useTheme } from "../hooks/useTheme";
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { token, isAdmin, isLoading, user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const isAuthenticated = Boolean(token);
   const navigate = useNavigate();
 
@@ -31,12 +33,23 @@ const NavBar = () => {
     setIsProfileMenuOpen(false);
   }
 
+  const profileLabel = user
+    ? `${user.name}${isAdmin ? " (Admin)" : ""}`
+    : isLoading
+      ? "Loading profile..."
+      : "Account";
+
   const navLinks = (
     <>
       <NavLink to="/movies" className={getLinkStyle} onClick={closeMenus}>
         Movies
       </NavLink>
-      {isAuthenticated && (
+      {isAuthenticated && !isAdmin && (
+        <NavLink to="/my-rentals" className={getLinkStyle} onClick={closeMenus}>
+          My Rentals
+        </NavLink>
+      )}
+      {isAdmin && (
         <>
           <NavLink to="/customers" className={getLinkStyle} onClick={closeMenus}>
             Customers
@@ -44,12 +57,10 @@ const NavBar = () => {
           <NavLink to="/rentals" className={getLinkStyle} onClick={closeMenus}>
             Rentals
           </NavLink>
+          <NavLink to="/admin" className={getLinkStyle} onClick={closeMenus}>
+            Admin
+          </NavLink>
         </>
-      )}
-      {isAdmin && (
-        <NavLink to="/admin" className={getLinkStyle} onClick={closeMenus}>
-          Admin
-        </NavLink>
       )}
     </>
   );
@@ -69,6 +80,18 @@ const NavBar = () => {
           <div className="hidden items-center space-x-2 md:flex">{navLinks}</div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              aria-pressed={theme === "light"}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-indigo-500/60 hover:bg-slate-800"
+            >
+              <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+              <span className="hidden sm:inline">
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </span>
+            </button>
             {isAuthenticated ? (
               <div className="relative">
                 <button
@@ -78,7 +101,7 @@ const NavBar = () => {
                   aria-haspopup="menu"
                   aria-expanded={isProfileMenuOpen}
                 >
-                  {user?.name ?? (isLoading ? "Loading profile..." : "Account")}
+                  {profileLabel}
                 </button>
                 {isProfileMenuOpen && (
                   <div

@@ -4,9 +4,10 @@ interface MovieCardProps {
   movie: Movie;
   onEdit?: (movie: Movie) => void;
   onDelete?: (movie: Movie) => void;
+  onRent?: (movie: Movie) => void;
 }
 
-function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
+function MovieCard({ movie, onEdit, onDelete, onRent }: MovieCardProps) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg transition-all duration-200 hover:border-slate-700/80">
       <h3 className="mb-1 text-xl font-bold tracking-tight text-white">
@@ -35,8 +36,24 @@ function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
         </p>
       </div>
 
-      {(onEdit || onDelete) && (
+      {(onEdit || onDelete || onRent) && (
         <div className="mt-5 space-y-2 border-t border-slate-800 pt-4">
+          {onRent && movie.numberInStock > 0 && (
+            <button
+              type="button"
+              onClick={() => onRent(movie)}
+              className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            >
+              Rent Movie
+            </button>
+          )}
+
+          {onRent && movie.numberInStock === 0 && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-xs font-medium text-amber-300">
+              Currently unavailable
+            </div>
+          )}
+
           {onEdit && (
             <button
               type="button"

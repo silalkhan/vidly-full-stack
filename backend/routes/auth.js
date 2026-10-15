@@ -1,10 +1,16 @@
 const Joi = require("joi");
 const bcrypt = require("bcrypt");
-const _ = require("lodash");
+const auth = require("../middleware/auth");
 const { User } = require("../models/user");
 
 const express = require("express");
 const router = express.Router();
+
+router.get("/me", auth, async (req, res) => {
+  const user = await User.findById(req.user._id).select("-password");
+  if (!user) return res.status(404).send("The current user was not found.");
+  res.send(user);
+});
 
 // Verify credentials and return a signed JWT for future requests.
 router.post("/", async (req, res) => {
@@ -22,9 +28,8 @@ router.post("/", async (req, res) => {
 });
 
 function validate(req) {
-  // Require valid login credentials before querying the user collection.
   const schema = Joi.object({
-    email: Joi.string().min(5).max(255).required().email(), // .email() ensures valid format
+    email: Joi.string().min(5).max(255).required().email(),
     password: Joi.string().min(5).max(255).required(),
   });
   return schema.validate(req);

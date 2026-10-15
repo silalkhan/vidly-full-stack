@@ -63,6 +63,25 @@ const rentalSchema = new mongoose.Schema({
     type: Number,
     min: 0,
   },
+
+  isArchived: {
+    type: Boolean,
+    default: false,
+  },
+
+  archivedAt: {
+    type: Date,
+  },
+
+  archivedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+
+  archiveReason: {
+    type: String,
+    trim: true,
+  },
 });
 
 // Find the most recent rental so repeated returns can be rejected explicitly.
@@ -90,7 +109,7 @@ function validateRental(rental) {
   const schema = Joi.object({
     customerId: Joi.string()
       .regex(/^[0-9a-fA-F]{24}$/)
-      .required()
+      .optional()
       .messages({
         "string.pattern.base": "Invalid Customer ID format.",
       }),
