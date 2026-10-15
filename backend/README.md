@@ -18,18 +18,25 @@ The Express application and HTTP server are separate. `app.js` configures Expres
 
 ```mermaid
 flowchart TD
-    A[Client] --> B[server.js]
-    B --> C[app.js]
-    C --> D[startup/config.js]
-    C --> E[startup/logging.js]
-    C --> F[startup/routes.js]
-    F --> G[Middleware]
-    G --> H[Route handlers]
-    H --> I[Mongoose models]
-    I --> J[(MongoDB)]
-    H --> K[HTTP response]
-    L[Jest + Supertest] --> C
+    Start["npm start"] --> Server["server.js"]
+    Server -->|imports| App["app.js"]
+    Server -->|connects| DBStart["startup/db.js"]
+    App --> Config["startup/config.js"]
+    App --> Logging["startup/logging.js"]
+    App --> Routes["startup/routes.js"]
+    App --> Production["startup/prod.js"]
+    Routes --> Middleware["Authentication, admin, validation"]
+    Middleware --> Handlers["backend/routes"]
+    Handlers --> Models["backend/models"]
+    Models --> Mongo[("MongoDB")]
+    Handlers --> Response["HTTP response"]
+    Tests["Jest + Supertest"] --> App
+    Tests --> TestDB[("Separate test database")]
 ```
+
+The route handlers call Mongoose models to read or write MongoDB. The Express
+app can also be imported directly by tests without opening a listening port;
+the integration-test setup connects to its separate test database.
 
 ## Request Flow
 
@@ -349,6 +356,11 @@ update. If a selected rental becomes ineligible after preview, it is skipped
 rather than incorrectly archived. The API reports `archivedCount` and
 `skippedCount`. Archiving does not run the return handler, change movie stock,
 or recalculate the rental fee.
+
+The customer-facing My Rentals page uses these API routes; it is included
+here to show the data returned by the authenticated rental-history endpoint:
+
+![Customer rental history returned by the API](<../screenshots/Screenshot 2026-10-16 002922.png>)
 
 ## Beginner's code tour
 

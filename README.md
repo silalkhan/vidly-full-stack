@@ -24,6 +24,21 @@ When you use Vidly, the main request flow is:
 5. The route reads or changes MongoDB through a model in `backend/models/`.
 6. TanStack Query updates or reloads the affected frontend data.
 
+```mermaid
+flowchart LR
+    Browser["Browser: React page"] --> Page["frontend/src/pages"]
+    Page --> Hook["frontend/src/hooks"]
+    Hook --> Client["Axios apiClient"]
+    Client -->|HTTP + optional JWT| API["Express API"]
+    API --> Middleware["Authentication, role, validation"]
+    Middleware --> Route["backend/routes"]
+    Route --> Model["backend/models"]
+    Model --> Mongo[("MongoDB")]
+    API -->|JSON response| Client
+    Client --> Cache["TanStack Query cache"]
+    Cache --> Page
+```
+
 Useful places to start reading:
 
 | If you want to understand... | Start here |
@@ -119,21 +134,21 @@ archive endpoints require an administrator.
 
 ## Screenshots
 
-Put screenshots you want to include in the repository in
-[`screenshots/`](./screenshots/). You can save a screenshot there from Windows
-or copy it into WSL, for example:
+These images are stored in [`screenshots/`](./screenshots/). The repository
+contains both light- and dark-theme views, registration, and a customer's
+rental history.
 
-```bash
-cp /mnt/c/Users/YOUR_WINDOWS_NAME/Pictures/vidly-home.png screenshots/
-```
+| Home | Public movie catalogue (light theme) |
+| --- | --- |
+| ![Vidly home page](<./screenshots/Screenshot 2026-10-16 002812.png>) | ![Public movie catalogue in light theme](<./screenshots/Screenshot 2026-10-16 002825.png>) |
 
-Replace `YOUR_WINDOWS_NAME` with your Windows account folder and use the
-actual screenshot filename. To display one here in the README, add a line
-like this and change the path to match the image:
+| Signed-in movie catalogue (dark theme) | Registration (dark theme) |
+| --- | --- |
+| ![Signed-in movie catalogue, first capture](<./screenshots/Screenshot 2026-10-16 002838.png>) | ![Registration page](<./screenshots/Screenshot 2026-10-16 002849.png>) |
 
-```markdown
-![Vidly home page](./screenshots/vidly-home.png)
-```
+| Signed-in movie catalogue (second capture) | Customer rental history |
+| --- | --- |
+| ![Signed-in movie catalogue, second capture](<./screenshots/Screenshot 2026-10-16 002914.png>) | ![My Rentals page](<./screenshots/Screenshot 2026-10-16 002922.png>) |
 
 Only add screenshots that do not expose passwords, private customer details,
 tokens, or other personal information.

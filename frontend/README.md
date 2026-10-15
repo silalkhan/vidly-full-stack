@@ -3,6 +3,29 @@
 The frontend is the website you use in the browser. It is built with React,
 TypeScript, Vite, React Router, Axios, TanStack Query, and Tailwind CSS v4.
 
+## How a page gets data
+
+```mermaid
+flowchart LR
+    Route["App.tsx: route + providers"] --> Page["Page component"]
+    Page --> Hook["Feature hook"]
+    Hook --> API["Axios apiClient"]
+    API -->|HTTP request + token| Backend["Express API"]
+    Backend -->|JSON response| API
+    API --> Hook
+    Hook -->|query result| Page
+    Mutation["Successful mutation"] --> Refresh["Invalidate relevant query keys"]
+    Refresh --> Hook
+    Auth["AuthProvider: current profile"] --> Guard["ProtectedRoute"]
+    Guard --> Page
+    Theme["ThemeProvider"] --> CSS["Global theme styles"]
+```
+
+For example, when a customer rents a movie, the Movies page calls the rent
+hook, the API client sends the request with the current login token, and the
+backend performs the permission and stock checks. On success, the hook
+invalidates the movie and My Rentals queries so the UI reloads current data.
+
 ## Install and run
 
 From this directory:
@@ -77,17 +100,19 @@ tested in the backend Jest/Supertest suite; see
 
 ## Adding screenshots
 
-Store project screenshots in the repository-level [`screenshots/`](../screenshots/)
-folder. From WSL, a screenshot saved in Windows Pictures can be copied in with:
+Project screenshots are stored in the repository-level
+[`screenshots/`](../screenshots/) folder.
 
-```bash
-cp /mnt/c/Users/YOUR_WINDOWS_NAME/Pictures/my-rentals.png ../screenshots/
-```
+| Home and movie catalogue | Login and registration |
+| --- | --- |
+| ![Vidly home page](<../screenshots/Screenshot 2026-10-16 002812.png>) | ![Registration page](<../screenshots/Screenshot 2026-10-16 002849.png>) |
 
-Use the image in a Markdown document with a relative path, for example:
+| Movie catalogue, light theme | Movie catalogue, dark theme |
+| --- | --- |
+| ![Public movie catalogue in light theme](<../screenshots/Screenshot 2026-10-16 002825.png>) | ![Signed-in movie catalogue in dark theme](<../screenshots/Screenshot 2026-10-16 002838.png>) |
 
-```markdown
-![My Rentals page](../screenshots/my-rentals.png)
-```
+| Movie catalogue, alternate capture | Customer rental history |
+| --- | --- |
+| ![Second signed-in movie catalogue capture](<../screenshots/Screenshot 2026-10-16 002914.png>) | ![My Rentals page with rental statuses and return actions](<../screenshots/Screenshot 2026-10-16 002922.png>) |
 
 Remove private information from the image before adding it to Git.
