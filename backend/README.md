@@ -216,9 +216,15 @@ Login body:
 
 | Method | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/rentals` | Yes + admin | List rentals |
+| `GET` | `/api/rentals` | Yes + admin | List rentals (archived records are excluded by default) |
 | `GET` | `/api/rentals/:id` | Yes + admin | Get one rental |
 | `POST` | `/api/rentals` | Yes + admin | Create a rental |
+| `GET` | `/api/rentals/archive-preview` | Yes + admin | Count returned, not-yet-archived rentals |
+| `POST` | `/api/rentals/archive/preview` | Yes + admin | Check which selected IDs are still eligible |
+| `POST` | `/api/rentals/archive` | Yes + admin | Soft-archive eligible returned rentals |
+| `GET` | `/api/rentals?archived=true` | Yes + admin | Inspect archived rentals |
+| `GET` | `/api/rentals/me` | Yes | List rentals for the signed-in user |
+| `POST` | `/api/rentals/me` | Yes | Rent a movie for the signed-in user |
 
 Create rental body:
 
@@ -250,6 +256,7 @@ flowchart TD
 | Method | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
 | `POST` | `/api/returns` | Yes + admin | Return a rental |
+| `POST` | `/api/returns/me` | Yes | Return a rental belonging to the signed-in user |
 
 ```json
 {
@@ -274,7 +281,7 @@ flowchart TD
 
 ## Data Model
 
-Movies embed a genre snapshot. Rentals embed customer and movie snapshots, so a rental keeps the relevant details from the time it was created.
+Movies embed a genre snapshot. Rentals embed customer and movie snapshots, so a rental keeps the relevant details from the time it was created. Returned rentals may also have `isArchived`, `archivedAt`, `archivedBy`, and `archiveReason` fields. These fields hide records from the default admin list without deleting them; admins can query them with `?archived=true`.
 
 ```mermaid
 erDiagram
@@ -309,11 +316,66 @@ erDiagram
         date dateOut
         date dateReturned
         number rentalFee
+        boolean isArchived
+        date archivedAt
+        ObjectId archivedBy
+        string archiveReason
     }
     GENRE ||--o{ MOVIE : "snapshot embedded"
     CUSTOMER ||--o{ RENTAL : "snapshot embedded"
     MOVIE ||--o{ RENTAL : "snapshot embedded"
 ```
+
+### Customer rental ownership
+
+The `/api/rentals/me` and `/api/returns/me` routes use the signed-in user's ID
+from the verified token to find the linked customer. They do not accept an
+arbitrary customer ID from the browser. This prevents a user from viewing or
+returning somebody else's rental by changing a request body.
+
+Registration creates or links a customer record for a new user. The
+`Customer.ensureForUser` helper also supports older user accounts that do not
+yet have a linked customer record.
+
+### Archiving returned rentals
+
+Archiving is a soft archive, not a database delete. The preview and archive
+routes share the same eligibility rule: `dateReturned` must contain a date and
+`isArchived` must not be `true`. This also allows older returned documents
+created before the archive field existed.
+
+The archive write applies that eligibility rule again as part of the database
+update. If a selected rental becomes ineligible after preview, it is skipped
+rather than incorrectly archived. The API reports `archivedCount` and
+`skippedCount`. Archiving does not run the return handler, change movie stock,
+or recalculate the rental fee.
+
+## Beginner's code tour
+
+The API is organized so each folder has one main responsibility:
+
+1. `server.js` starts the HTTP server and database connection.
+2. `app.js` creates the Express application.
+3. `startup/routes.js` registers middleware and mounts route files under `/api`.
+4. `middleware/` checks authentication, admin permission, IDs, and request data.
+5. `routes/` defines what each API URL does.
+6. `models/` defines MongoDB document shapes and model-level helpers.
+7. `tests/` checks that routes and models behave as expected.
+
+For a first learning path, follow these pairs:
+
+| Learn about... | Read these files |
+| --- | --- |
+| Login and token creation | `routes/auth.js`, `models/user.js`, `middleware/auth.js` |
+| Admin-only APIs | `middleware/auth.js`, `middleware/admin.js`, then a route such as `routes/movies.js` |
+| A customer renting a movie | `routes/rentals.js`, then `models/rental.js` and `models/movie.js` |
+| Returning and restoring stock | `routes/returns.js`, then `models/rental.js` |
+| Data validation | `middleware/validate.js` and the relevant model/route validation function |
+| Expected behavior for a request | The matching file in `tests/integration/` |
+
+In an Express route, middleware runs before the route handler. For example,
+`[auth, admin]` first verifies the login token, then checks the administrator
+flag, and only then allows the handler to run.
 
 ## Project Structure
 
@@ -365,6 +427,9 @@ tests/
 │   ├── authorization.test.js
 │   ├── auth.test.js
 │   ├── genres.test.js
+│   ├── rentals-archive.test.js
+│   ├── rentals-me.test.js
+│   ├── returns-me.test.js
 │   ├── returns.test.js
 │   └── setup.js
 └── unit/
